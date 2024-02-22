@@ -1,4 +1,4 @@
-# Echomirror
+# echomirror
 `echomirror` is a zero-configuration utility that logs all HTTP requests it receives.
 
 ![Example usage of echomirror](docs/assets/example.png)
