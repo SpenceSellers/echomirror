@@ -4,7 +4,12 @@
 ![Example usage of echomirror](/home/spence/Programming/echomirror/docs/assets/example.png)
 
 ## Installation
+Using [pipx](https://github.com/pypa/pipx):
+```bash
 pipx install git+https://github.com/SpenceSellers/echomirror.git
+```
+
+After this the `echomirror` command should be available.
 ## Usage
 
 ```

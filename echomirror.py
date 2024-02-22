@@ -70,7 +70,7 @@ def main(port, status_code, text, json):
     server = HTTPServer(("localhost", port), MyServer)
 
     try:
-        print(f"Serving on http://localhost:{port}")
+        click.secho(f"Serving on http://localhost:{port}", fg='cyan')
         server.serve_forever()
     except KeyboardInterrupt:
         pass
