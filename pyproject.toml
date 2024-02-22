@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "echomirror"
+version = "0.1.0"
+description = ""
+authors = ["Spence Sellers <spencesellers@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+click = "^8.1.7"
+
+[tool.poetry.scripts]
+echomirror = 'echomirror:main'
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
