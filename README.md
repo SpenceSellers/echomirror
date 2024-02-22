@@ -1,7 +1,7 @@
 # Echomirror
 `echomirror` is a zero-configuration utility that logs all HTTP requests it receives.
 
-![Example usage of echomirror](/home/spence/Programming/echomirror/docs/assets/example.png)
+![Example usage of echomirror](docs/assets/example.png)
 
 ## Installation
 Using [pipx](https://github.com/pypa/pipx):
