@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "echomirror"
-version = "0.1.1"
+version = "0.1.2"
 description = ""
 authors = ["Spence Sellers <spencesellers@gmail.com>"]
 license = "MIT"

@@ -14,7 +14,7 @@ import click
 @click.option('--json', default=None, type=str,
               help='Respond to requests with this JSON using the application/json content-type')
 @click.option('--expose/--localhost-only', default=False, show_default=True, is_flag=True,
-              help='Whether this port to the outside network (i.e., host on 0.0.0.0), or only allow localhost '
+              help='Whether to expose this port to the outside network (i.e., host on 0.0.0.0), or only allow localhost '
                    'connections.')
 def main(port, status_code: int, text: Optional[str], json: Optional[str], expose: bool) -> None:
     class MyServer(BaseHTTPRequestHandler):
