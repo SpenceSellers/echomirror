@@ -1,16 +1,22 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Optional
 
 import click
 
 
-
-
 @click.command()
-@click.option('--port', '-p', default=8080, help='The port that echomirror will listen to', show_default=True)
-@click.option('--status-code', '-s', default=200, help='The HTTP status code we will return', show_default=True)
-@click.option('--text', default=None, type=str, help='Respond to requests with this text using the text/plain content-type')
-@click.option('--json', default=None, type=str, help='Respond to requests with this JSON using the application/json content-type')
-def main(port, status_code, text, json):
+@click.option('--port', '-p', default=8080, show_default=True,
+              help='The port that echomirror will listen to')
+@click.option('--status-code', '-s', default=200, show_default=True,
+              help='The HTTP status code we will return')
+@click.option('--text', default=None, type=str,
+              help='Respond to requests with this text using the text/plain content-type')
+@click.option('--json', default=None, type=str,
+              help='Respond to requests with this JSON using the application/json content-type')
+@click.option('--expose/--localhost-only', default=False, show_default=True, is_flag=True,
+              help='Whether this port to the outside network (i.e., host on 0.0.0.0), or only allow localhost '
+                   'connections.')
+def main(port, status_code: int, text: Optional[str], json: Optional[str], expose: bool) -> None:
     class MyServer(BaseHTTPRequestHandler):
         method: str = None
 
@@ -61,16 +67,17 @@ def main(port, status_code, text, json):
             content_len = self.headers.get('Content-Length');
             if content_len:
                 click.echo(self.rfile.read(int(content_len)).decode('utf-8'))
-            pass
 
     if text and json:
         click.echo("--text and --json cannot be used at the same time.", err=True)
         return
 
-    server = HTTPServer(("localhost", port), MyServer)
+    host = 'locahost' if expose else '0.0.0.0'
+
+    server = HTTPServer((host, port), MyServer)
 
     try:
-        click.secho(f"Serving on http://localhost:{port}", fg='cyan')
+        click.secho(f"Serving on http://{host}:{port}", fg='cyan')
         server.serve_forever()
     except KeyboardInterrupt:
         pass
