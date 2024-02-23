@@ -28,6 +28,10 @@ Options:
                                network (i.e., host on 0.0.0.0), or only allow
                                localhost connections.  [default: localhost-
                                only]
+  --proxy TEXT                 Send intercepted requests to the specified URL
+                               and return the responses back to the client.
+                               This allows you to 'spy' on requests made to a
+                               remote server.
   --help                       Show this message and exit.
 ```
 

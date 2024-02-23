@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Optional, Dict
+from typing import Optional, Dict, cast
 
 import click
 import requests
@@ -22,7 +22,8 @@ from urllib import parse
 @click.option('--expose/--localhost-only', default=False, show_default=True, is_flag=True,
               help='Whether to expose this port to the outside network (i.e., host on 0.0.0.0), or only allow localhost '
                    'connections.')
-@click.option('--proxy', type=str)
+@click.option('--proxy', type=str,
+              help='Send intercepted requests to the specified URL and return the responses back to the client. This allows you to \'spy\' on requests made to a remote server.')
 def main(port, status_code: int, text: Optional[str], json: Optional[str], expose: bool, proxy: Optional[str]) -> None:
     class MyServer(BaseHTTPRequestHandler):
         method: str = None
@@ -30,19 +31,15 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
 
         def handle_request(self):
             if proxy:
-                url = parse.urljoin(proxy, self.path)
-                proxy_request_headers = {}
-                for proxy_request_header in self.headers:
-                    request_header_values = self.headers.get_all(proxy_request_header)
-                    if len(request_header_values) > 1:
-                        click.secho(f"echomirror only supports one value per header key, but {request_header_values} has {len(request_header_values)} values. Sending only the first one.",
-                                    fg='yellow', err=True)
-                    proxy_request_headers[proxy_request_header] = request_header_values[0]
-                proxy_request_headers["Host"] = parse.urlparse(proxy).hostname
+                url = concat_urls(proxy, self.path)
+                proxy_request_headers = self.build_proxy_request_headers()
                 response = requests.request(method=self.method, url=url, headers=proxy_request_headers)
-                self.proxy_response = ProxyResponseData(response.status_code, response.content, self.headers_as_dict())
+                self.proxy_response = ProxyResponseData(url, response.status_code, response.content, cast(Dict[str, str], response.headers))
 
                 self.send_response(response.status_code)
+                for proxy_response_header, value in response.headers.items():
+                    self.send_header(proxy_response_header, value)
+
                 self.end_headers()
 
                 self.wfile.write(response.content)
@@ -58,6 +55,17 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
                 self.wfile.write(bytes(text or json or '', "utf-8"))
             self.log_request_and_response()
 
+        def build_proxy_request_headers(self):
+            proxy_request_headers = {}
+            for proxy_request_header in self.headers:
+                request_header_values = self.headers.get_all(proxy_request_header)
+                if len(request_header_values) > 1:
+                    click.secho(
+                        f"echomirror only supports one value per header key, but {request_header_values} has {len(request_header_values)} values. Sending only the first one.",
+                        fg='yellow', err=True)
+                proxy_request_headers[proxy_request_header] = request_header_values[0]
+            proxy_request_headers["Host"] = parse.urlparse(proxy).hostname
+            return proxy_request_headers
 
         def do_GET(self):
             self.method = 'GET'
@@ -93,7 +101,7 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
 
         def log_request_and_response(self):
             click.echo("")
-            click.secho(f"{self.method} {self.path}", fg='green')
+            click.secho(f"--> {self.method} {self.path}", fg='green')
             for header_name in self.headers:
                 for header_value in self.headers.get_all(header_name):
                     click.echo(f"    {header_name}: {header_value}")
@@ -102,10 +110,11 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
                 click.echo(self.rfile.read(int(content_len)).decode('utf-8'))
 
             if self.proxy_response:
+                click.secho(f"<-- Response proxied from {self.proxy_response.url}", fg='green')
                 for header_name, header_value in self.proxy_response.headers.items():
                     click.echo(f"    {header_name}: {header_value}")
 
-                click.secho(self.proxy_response.response.decode('utf-8'), fg='gray')
+                click.secho(self.proxy_response.response.decode('utf-8'))
 
         def headers_as_dict(self) -> Dict[str, str]:
             d = {}
@@ -131,9 +140,24 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
 
 @dataclass
 class ProxyResponseData:
+    url: str
     status: int
     response: bytes
     headers: Dict[str, str]
+
+
+def concat_urls(a: str, b: str) -> str:
+    """
+    concat_urls('http://example.com/foo', '/bar') becomes 'http://example.com/foo/bar'
+
+    This is not the same as urljoin's behavior, which will treat the 2nd argument as an absolute path"""
+    if not a.endswith('/'):
+        a += '/'
+
+    if b.startswith('/'):
+        b = b.rstrip('/')
+
+    return a + b
 
 
 if __name__ == '__main__':
