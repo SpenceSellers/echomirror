@@ -38,10 +38,13 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
 
                 self.send_response(response.status_code)
                 for proxy_response_header, value in response.headers.items():
+                    if proxy_response_header.lower() == 'transfer-encoding' and value.lower() == 'chunked':
+                        continue  # We don't support chunked transfer on our response, we're going to send it all at once.
                     self.send_header(proxy_response_header, value)
 
                 self.end_headers()
 
+                # TODO handle chunked encoding here.
                 self.wfile.write(response.content)
 
             else:
