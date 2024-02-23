@@ -110,7 +110,7 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
                 click.echo(self.rfile.read(int(content_len)).decode('utf-8'))
 
             if self.proxy_response:
-                click.secho(f"<-- Response proxied from {self.proxy_response.url}", fg='green')
+                click.secho(f"<-- {self.proxy_response.status} response proxied from {self.proxy_response.url}", fg='green')
                 for header_name, header_value in self.proxy_response.headers.items():
                     click.echo(f"    {header_name}: {header_value}")
 
