@@ -2,6 +2,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Optional
 
 import click
+import requests
+from urllib import parse
 
 
 @click.command()
@@ -16,19 +18,39 @@ import click
 @click.option('--expose/--localhost-only', default=False, show_default=True, is_flag=True,
               help='Whether to expose this port to the outside network (i.e., host on 0.0.0.0), or only allow localhost '
                    'connections.')
-def main(port, status_code: int, text: Optional[str], json: Optional[str], expose: bool) -> None:
+@click.option('--proxy', type=str)
+def main(port, status_code: int, text: Optional[str], json: Optional[str], expose: bool, proxy: Optional[str]) -> None:
     class MyServer(BaseHTTPRequestHandler):
         method: str = None
 
         def handle_request(self):
-            self.send_response(status_code)
-            if text:
-                self.send_header("Content-type", "text/plain")
-            elif json:
-                self.send_header("Content-type", "application/json")
+            if proxy:
+                url = parse.urljoin(proxy, self.path)
+                proxy_request_headers = {}
+                for proxy_request_header in self.headers:
+                    request_header_values = self.headers.get_all(proxy_request_header)
+                    if len(request_header_values) > 1:
+                        click.secho(f"echomirror only supports one value per header key, but {request_header_values} has {len(request_header_values)} values. Sending only the first one.",
+                                    fg='yellow', err=True)
+                    proxy_request_headers[proxy_request_header] = request_header_values[0]
+                proxy_request_headers["Host"] = parse.urlparse(proxy).hostname
+                response = requests.request(method=self.method, url=url, headers=proxy_request_headers)
 
-            self.end_headers()
-            self.wfile.write(bytes(text or json or '', "utf-8"))
+                self.send_response(response.status_code)
+                self.end_headers()
+
+                self.wfile.write(response.content)
+
+            else:
+                self.send_response(status_code)
+                if text:
+                    self.send_header("Content-type", "text/plain")
+                elif json:
+                    self.send_header("Content-type", "application/json")
+
+                self.end_headers()
+                self.wfile.write(bytes(text or json or '', "utf-8"))
+
 
         def do_GET(self):
             self.method = 'GET'
@@ -59,6 +81,9 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
             self.end_headers()
 
         def log_request(self, format, *args):
+            if not hasattr(self, 'path'):
+                click.echo("No path??")
+                return
             click.echo("")
             click.secho(f"{self.method} {self.path}", fg='green')
             for header_name in self.headers:
