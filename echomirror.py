@@ -88,7 +88,7 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
             self.end_headers()
 
         def log_request(self, format, *args):
-            '''We're overriding the built-in log-request method. We're going to handle it ourselves:'''
+            """We're overriding the built-in log-request method. We're going to handle it ourselves:"""
             pass
 
         def log_request_and_response(self):
@@ -105,7 +105,7 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
                 for header_name, header_value in self.proxy_response.headers.items():
                     click.echo(f"    {header_name}: {header_value}")
 
-                click.echo(self.proxy_response.response.decode('utf-8'))
+                click.secho(self.proxy_response.response.decode('utf-8'), fg='gray')
 
         def headers_as_dict(self) -> Dict[str, str]:
             d = {}
