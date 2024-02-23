@@ -1,9 +1,13 @@
+from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Optional
+from typing import Optional, Dict
 
 import click
 import requests
 from urllib import parse
+
+
+
 
 
 @click.command()
@@ -22,6 +26,7 @@ from urllib import parse
 def main(port, status_code: int, text: Optional[str], json: Optional[str], expose: bool, proxy: Optional[str]) -> None:
     class MyServer(BaseHTTPRequestHandler):
         method: str = None
+        proxy_response: Optional[ProxyResponseData] = None
 
         def handle_request(self):
             if proxy:
@@ -35,6 +40,7 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
                     proxy_request_headers[proxy_request_header] = request_header_values[0]
                 proxy_request_headers["Host"] = parse.urlparse(proxy).hostname
                 response = requests.request(method=self.method, url=url, headers=proxy_request_headers)
+                self.proxy_response = ProxyResponseData(response.status_code, response.content, self.headers_as_dict())
 
                 self.send_response(response.status_code)
                 self.end_headers()
@@ -50,6 +56,7 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
 
                 self.end_headers()
                 self.wfile.write(bytes(text or json or '', "utf-8"))
+            self.log_request_and_response()
 
 
         def do_GET(self):
@@ -81,9 +88,10 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
             self.end_headers()
 
         def log_request(self, format, *args):
-            if not hasattr(self, 'path'):
-                click.echo("No path??")
-                return
+            '''We're overriding the built-in log-request method. We're going to handle it ourselves:'''
+            pass
+
+        def log_request_and_response(self):
             click.echo("")
             click.secho(f"{self.method} {self.path}", fg='green')
             for header_name in self.headers:
@@ -92,6 +100,19 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
             content_len = self.headers.get('Content-Length');
             if content_len:
                 click.echo(self.rfile.read(int(content_len)).decode('utf-8'))
+
+            if self.proxy_response:
+                for header_name, header_value in self.proxy_response.headers.items():
+                    click.echo(f"    {header_name}: {header_value}")
+
+                click.echo(self.proxy_response.response.decode('utf-8'))
+
+        def headers_as_dict(self) -> Dict[str, str]:
+            d = {}
+            for header in self.headers:
+                d[header] = self.headers[header]
+            return d
+
 
     if text and json:
         click.echo("--text and --json cannot be used at the same time.", err=True)
@@ -106,6 +127,13 @@ def main(port, status_code: int, text: Optional[str], json: Optional[str], expos
         server.serve_forever()
     except KeyboardInterrupt:
         pass
+
+
+@dataclass
+class ProxyResponseData:
+    status: int
+    response: bytes
+    headers: Dict[str, str]
 
 
 if __name__ == '__main__':
