@@ -56,7 +56,7 @@ def main(
     proxy: Optional[str],
 ) -> None:
     class MyServer(BaseHTTPRequestHandler):
-        method: str = None
+        method: Optional[str] = None
         proxy_response: Optional[ProxyResponseData] = None
 
         def handle_request(self):
