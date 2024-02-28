@@ -49,7 +49,7 @@ from urllib import parse
          "to 'spy' on requests made to a remote server.",
 )
 def main(
-    port,
+    port: int,
     status_code: int,
     text: Optional[str],
     json: Optional[str],
