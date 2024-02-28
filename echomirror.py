@@ -45,7 +45,8 @@ from urllib import parse
 @click.option(
     "--proxy",
     type=str,
-    help="Send intercepted requests to the specified URL and return the responses back to the client. This allows you to 'spy' on requests made to a remote server.",
+    help="Send intercepted requests to the specified URL and return the responses back to the client. This allows you "
+         "to 'spy' on requests made to a remote server.",
 )
 def main(
     port,
@@ -82,8 +83,13 @@ def main(
                     if proxy_response_header.lower() == "content-encoding":
                         # We don't support gzip or any other encoding, it's going to be sent as plaintext
                         continue
+                    if proxy_response_header.lower() == "content-length":
+                        # We'll be re-calculating this ourselves. We can't trust it now that we've messed with the
+                        # encoding.
+                        continue
                     self.send_header(proxy_response_header, value)
 
+                self.send_header("Content-length", str(len(response.content)))
                 self.end_headers()
 
                 self.wfile.write(response.content)
@@ -96,7 +102,8 @@ def main(
                     self.send_header("Content-type", "application/json")
 
                 self.end_headers()
-                self.wfile.write(bytes(text or json or "", "utf-8"))
+                body_to_send = bytes(text or json or "", "utf-8")
+                self.wfile.write(body_to_send)
             self.log_request_and_response()
 
         def build_proxy_request_headers(self):
