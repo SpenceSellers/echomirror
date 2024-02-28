@@ -62,17 +62,7 @@ def main(
 
         def handle_request(self):
             if proxy:
-                url = concat_urls(proxy, self.path)
-                proxy_request_headers = self.build_proxy_request_headers()
-                response = requests.request(
-                    method=self.method, url=url, headers=proxy_request_headers
-                )
-                self.proxy_response = ProxyResponseData(
-                    url,
-                    response.status_code,
-                    response.content,
-                    cast(Dict[str, str], response.headers),
-                )
+                response = self.make_proxy_request()
 
                 self.send_response(response.status_code)
                 for proxy_response_header, value in response.headers.items():
@@ -89,7 +79,9 @@ def main(
                         continue
                     self.send_header(proxy_response_header, value)
 
-                self.send_header("Content-length", str(len(response.content)))
+                # I'm actually not sure why this is needed in this case, but it isn't in the other case.
+                # Without it, clients don't seem to know when the response is finished.
+                self.send_header("Content-Length", str(len(response.content)))
                 self.end_headers()
 
                 self.wfile.write(response.content)
@@ -105,6 +97,20 @@ def main(
                 body_to_send = bytes(text or json or "", "utf-8")
                 self.wfile.write(body_to_send)
             self.log_request_and_response()
+
+        def make_proxy_request(self):
+            url = concat_urls(proxy, self.path)
+            proxy_request_headers = self.build_proxy_request_headers()
+            response = requests.request(
+                method=self.method, url=url, headers=proxy_request_headers
+            )
+            self.proxy_response = ProxyResponseData(
+                url,
+                response.status_code,
+                response.content,
+                cast(Dict[str, str], response.headers),
+            )
+            return response
 
         def build_proxy_request_headers(self):
             proxy_request_headers = {}
