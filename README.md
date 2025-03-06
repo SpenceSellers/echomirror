@@ -4,9 +4,9 @@
 ![Example usage of echomirror](docs/assets/example.png)
 
 ## Installation
-Using [pipx](https://github.com/pypa/pipx):
+Using [uv](https://github.com/astral-sh/uv):
 ```bash
-pipx install git+https://github.com/SpenceSellers/echomirror.git
+uv tool install  git+https://github.com/SpenceSellers/echomirror.git
 ```
 
 After this the `echomirror` command should be available.
